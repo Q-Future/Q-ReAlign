@@ -8,6 +8,8 @@
 
 [The method](docs/METHOD.md) · [Adapting guide](docs/ADAPTING.md) · [Quickstart](#5-minute-tour-no-gpu-bundled-toy-data) · [Results](#results)
 
+[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Q--ReAlign%20Collection-ffcc00)](https://huggingface.co/collections/q-future/q-realign)
+
 </div>
 
 ---
@@ -54,6 +56,19 @@ Mini (0.8B) tops out at <b>26.7 img/s @ bs=4</b> (4090) and <b>61.1 img/s @ bs=1
 (H200); OOM points are marked where the batch size exceeds device memory.
 </p>
 
+## Models
+
+Pretrained weights are on the Hugging Face Hub —
+[**q-future/Q-ReAlign** collection](https://huggingface.co/collections/q-future/q-realign):
+
+| Model | Params | Hugging Face |
+|---|---|---|
+| Pro  | 9B   | [`q-future/Q-ReAlign-Pro-9B`](https://huggingface.co/q-future/Q-ReAlign-Pro-9B) |
+| Lite | 4B   | [`q-future/Q-ReAlign-Lite-4B`](https://huggingface.co/q-future/Q-ReAlign-Lite-4B) |
+| Mini | 0.8B | [`q-future/Q-ReAlign-Mini-0.8B`](https://huggingface.co/q-future/Q-ReAlign-Mini-0.8B) |
+
+Pass any of these repo IDs as `CKPT` / `--model` and the weights download automatically.
+
 ## Quick Run
 ```python
 import torch
@@ -61,7 +76,7 @@ from PIL import Image
 from transformers import AutoModelForImageTextToText, AutoProcessor
 # transformers >= 5.2.0 for Qwen3.5 Support
 
-CKPT, IMAGE = "path/to/checkpoint", "photo.jpg"
+CKPT, IMAGE = "q-future/Q-ReAlign-Mini-0.8B", "photo.jpg"   # auto-downloads from the Hub
 LEVELS, WEIGHTS = ["excellent", "good", "fair", "poor", "bad"], [1.0, 0.75, 0.5, 0.25, 0.0]
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
