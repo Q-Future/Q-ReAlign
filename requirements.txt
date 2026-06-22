@@ -1,0 +1,17 @@
+# Import-time dependencies (the data/template/config/cache layer runs on a laptop).
+numpy
+scipy            # SRCC / PLCC
+pillow           # image IO
+pyyaml           # YAML config
+
+# ---------------------------------------------------------------------------
+# Runtime stack — needed only to TRAIN / EVAL / INFER on a GPU. These are
+# normally provided by the training image, not pip-installed from scratch.
+# Install with:  pip install -e ".[runtime]"
+# ---------------------------------------------------------------------------
+# ms-swift==4.0.2
+# transformers==5.3.0
+# deepspeed
+# flash-attn
+# torch>=2.6
+# decord          # video frame sampling

@@ -1,0 +1,67 @@
+# ===========================================================================
+# Minimal Q-Align experiment: ONE model, ONE image-quality dataset.
+#
+# This config is RUNNABLE OUT OF THE BOX on the bundled toy dataset for the
+# CPU-only stages (run from the repo root):
+#     qalign build --config configs/example_iqa.yaml
+#     qalign cache --config configs/example_iqa.yaml --which train
+# The train / eval / infer stages need a real model + the GPU runtime — fill in
+# `model.path` and point the dataset at your data, then:
+#     qalign train --config configs/example_iqa.yaml mini
+#
+# Copy this file and edit it — that is how you adapt Q-Align to a new model or a
+# new dataset. See docs/ADAPTING.md.
+# ===========================================================================
+
+model:
+  # Any ms-swift-registered VL model. Swap these three lines to change backbone.
+  path: /PATH/TO/your-vl-model        # local dir or HF id  (EDIT ME)
+  model_type: qwen3_5                 # swift model_type
+  template: qwen3_5                   # swift template (usually == model_type)
+  enable_thinking: false              # qwen "thinking" toggle; ignored otherwise
+  max_length: 8192                    # keep >= 8192 if you train on video
+
+# Discrete quality levels (BEST -> WORST) and their scalar weights. The continuous
+# score is the weighted average of the level-token softmax. Edit to use more/fewer
+# levels or a different vocabulary.
+levels:
+  names:   [excellent, good, fair, poor, bad]
+  weights: [1.0, 0.75, 0.5, 0.25, 0.0]
+
+# Where built artifacts go. ${root} expands to `paths.root` (relative to CWD).
+paths:
+  root: examples/runs
+
+data:
+  frames_per_video: 8
+  resize_long: 448
+  datasets:
+    # A generic CSV dataset: give the column names. MOS is binned into levels.
+    - name: toy_iqa
+      task: iqa                       # iqa | iaa | vqa  -> picks the prompt + answer stem
+      format: csv                     # csv | jsonl | qalign_json
+      source: examples/data/sample.csv
+      media_root: examples/data/imgs
+      modality: image
+      path_col: path
+      score_col: mos
+      dmos: false                     # set true if higher score == worse (e.g. LIVE/CSIQ)
+  mix: [toy_iqa]                      # datasets to TRAIN on
+
+train:
+  train_type: full                    # full (param FT) | lora
+  deepspeed: zero2                    # zero2 | zero3 | zero3_offload (full only)
+  lr: 2.0e-5                          # 2e-5 full / 2e-4 lora are the faithful defaults
+  epochs: 2
+  batch_size: 4
+  grad_accum: 2
+  gpus: 1
+  freeze_vit: false                   # train the vision tower (onealign-faithful)
+  save_steps: 200
+  save_total_limit: 3
+
+eval:
+  sets: [toy_iqa]                     # eval manifest names (need a gt score per record)
+  limit: 200                          # records/set during in-training eval (0 = all)
+  in_training: true                   # score the live model at every checkpoint save
+  keep_best_n: 1                      # preserve the top-N checkpoints (by avg SRCC)

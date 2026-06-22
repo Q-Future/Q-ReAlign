@@ -1,0 +1,33 @@
+# --- Q-Align toolkit artifacts (built / trained; never commit) ---
+# Built manifests, packed caches, extracted frames, checkpoints, logs.
+*.jsonl
+*.blob
+*.idx.json
+index.json
+examples/runs/
+frames/
+frames_cache/
+*_cache/
+cache/
+output/
+runs/
+checkpoint-*/
+best/
+
+# Logs
+*.log
+logging.jsonl
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/

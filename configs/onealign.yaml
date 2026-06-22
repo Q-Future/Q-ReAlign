@@ -1,0 +1,91 @@
+# ===========================================================================
+# ONE-ALIGN: one unified model over IQA + IAA + VQA (Q-Align Table 7).
+#
+# Reference config showing the full multi-task, multi-modality setup with both
+# the released Q-Align SFT JSONs (answers used verbatim) and a continuous-MOS
+# dataset (binned into levels). Replace the placeholder paths with yours.
+#
+# Flow (on a GPU pod):
+#   qalign build  --config configs/onealign.yaml     # image train + all eval manifests
+#   qalign frames --config configs/onealign.yaml     # LSVQ video -> 8 frames + manifest
+#   qalign cache  --config configs/onealign.yaml     # pack train + eval blob caches
+#   qalign train  --config configs/onealign.yaml     # full-parameter SFT (ONE-ALIGN)
+#   qalign eval   --config configs/onealign.yaml --model <ckpt>
+# ===========================================================================
+
+model:
+  path: /PATH/TO/your-vl-model        # EDIT ME (e.g. a Qwen-VL / InternVL / LLaVA dir)
+  model_type: qwen3_5
+  template: qwen3_5
+  enable_thinking: false
+  max_length: 8192
+
+levels:
+  names:   [excellent, good, fair, poor, bad]
+  weights: [1.0, 0.75, 0.5, 0.25, 0.0]
+
+paths:
+  root: runs/onealign
+
+data:
+  frames_per_video: 8
+  resize_long: 448
+  datasets:
+    # --- IQA (image quality) — released Q-Align SFT JSONs, answers verbatim ----
+    - {name: koniq, task: iqa, format: qalign_json, modality: image,
+       source: /DATA/Q-Align/train_koniq.json, media_root: /DATA/q-align-dataset}
+    - {name: spaq,  task: iqa, format: qalign_json, modality: image,
+       source: /DATA/Q-Align/train_spaq.json,  media_root: /DATA/q-align-dataset}
+    - {name: kadid, task: iqa, format: qalign_json, modality: image,
+       source: /DATA/Q-Align/train_kadid.json, media_root: /DATA/kadid10k/images,
+       basename_only: true}
+    # --- IAA (aesthetics) ------------------------------------------------------
+    - {name: ava,   task: iaa, format: qalign_json, modality: image,
+       source: /DATA/Q-Align/train_ava.json,   media_root: /DATA/q-align-dataset}
+    # --- VQA (video quality) — frames extracted by `qalign frames` -------------
+    - {name: lsvq,  task: vqa, format: qalign_json, modality: video,
+       source: /DATA/Q-Align/train_lsvq.json,  media_root: /DATA/LSVQ-video}
+    # --- (example) a continuous-MOS set of your own, binned into levels --------
+    # - {name: my_aigc, task: iqa, format: csv, modality: image,
+    #    source: /DATA/aigc/info.csv, media_root: /DATA/aigc/imgs,
+    #    path_col: name, score_col: mos}
+
+    # --- TEST sets (separate splits, each needs a ground-truth score) ----------
+    # Released Q-Align test JSONs carry gt_score (KADID encodes it in `id`); your
+    # own test split can be csv/jsonl with a score_col. These feed eval.sets below.
+    - {name: test_koniq, task: iqa, format: qalign_json, modality: image,
+       source: /DATA/Q-Align/test_koniq.json, media_root: /DATA/q-align-dataset,
+       score_col: gt_score}
+    - {name: test_lsvq,  task: vqa, format: qalign_json, modality: video,
+       source: /DATA/Q-Align/test_lsvq.json,  media_root: /DATA/LSVQ-video,
+       score_col: gt_score}
+    # cross-dataset OOD example: higher DMOS == worse, so dmos: true
+    - {name: live, task: iqa, format: qalign_json, modality: image, dmos: true,
+       source: /DATA/Q-Align/live.json, media_root: /DATA/q-align-dataset,
+       score_col: gt_score}
+
+  mix: [koniq, spaq, kadid, ava, lsvq]     # ONE-ALIGN = all of them
+
+train:
+  train_type: full
+  deepspeed: zero2                    # use zero3 / zero3_offload for large models
+  lr: 2.0e-5
+  epochs: 2
+  batch_size: 4
+  grad_accum: 2
+  gpus: 2
+  freeze_vit: false
+  freeze_aligner: false
+  save_steps: 500
+  save_total_limit: 3
+  save_only_model: true
+  dataloader: {num_workers: 24, prefetch: 6, dataset_num_proc: 32}
+
+eval:
+  # In-distribution (test_koniq, test_lsvq) + cross-dataset OOD (live). Each eval
+  # entry needs a ground-truth score per record (score_col / gt_score).
+  sets: [test_koniq, test_lsvq, live]
+  limit: 200
+  in_training: true
+  every: 1
+  keep_best_n: 1

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qalign"
+version = "0.1.0"
+description = "Modernized, model-agnostic Q-Align: visual quality / aesthetics scoring as discrete text levels, on any ms-swift VL model."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Q-Align contributors" }]
+keywords = ["quality-assessment", "IQA", "VQA", "aesthetics", "multimodal", "LLM", "ms-swift"]
+
+# Lightweight, import-time deps only. The heavy runtime stack (ms-swift, torch,
+# deepspeed, flash-attn) is provided by the training/eval image and is imported
+# LAZILY inside qalign.model/scorer/train, so `import qalign` works on a laptop.
+dependencies = [
+    "numpy",
+    "scipy",        # SRCC / PLCC
+    "pillow",       # image IO
+    "pyyaml",       # config files
+]
+
+[project.optional-dependencies]
+# Needed only to actually train / evaluate / run inference (GPU box).
+runtime = ["ms-swift==4.0.2", "transformers==5.3.0", "deepspeed", "decord"]
+plots = ["matplotlib"]
+dev = ["pytest"]
+
+[project.scripts]
+qalign = "qalign.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["qalign*"]
