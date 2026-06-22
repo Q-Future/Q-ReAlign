@@ -14,7 +14,8 @@
 
 ---
 *Q-Align-level performance with 50% fewer parameters. Easy to use, easy to train.*
-4G Memory. 
+
+*The 0.8B model requires less than 4 GB of memory.*
 
 ## Results
 
