@@ -17,6 +17,10 @@
 
 *The 0.8B model requires less than 4 GB of GPU memory and is CPU-runnable.*
 
+## News
+
+- 🆕 **Jun 2026** — Q-ReAlign has been adopted by [**IQA-PyTorch**](https://github.com/chaofengc/IQA-PyTorch)! All three sizes are now available as the `qrealign` metric (`qrealign-mini` / `qrealign-lite` / `qrealign-pro`) — score any image in two lines via `pyiqa.create_metric`. See [Use via IQA-PyTorch](#use-via-iqa-pytorch).
+
 ## Results
 
 We train three sizes — **Mini (0.8B) · Lite (4B) · Pro (9B)** (the mascots above) —
@@ -96,6 +100,44 @@ probs = model(**inputs).logits[0, -1, ids].softmax(-1)
 score = (probs * torch.tensor(WEIGHTS, device=device)).sum().item()
 print(f"quality score: {score:.4f}")   # 0 (worst) .. 1 (best)
 ```
+
+## Use via IQA-PyTorch
+
+Q-ReAlign is built into [**IQA-PyTorch**](https://github.com/chaofengc/IQA-PyTorch)
+(`pyiqa`) as the `qrealign` metric — the easiest way to score images without
+touching the training stack. The checkpoints download automatically from the Hub.
+
+```bash
+pip install pyiqa
+pip install -U "transformers>=5.2"   # Qwen3.5-VL backbone needs transformers >= 5.0
+```
+
+```python
+import pyiqa
+import torch
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+# qrealign defaults to Mini (0.8B); use qrealign-lite (4B) or qrealign-pro (9B)
+iqa_metric = pyiqa.create_metric("qrealign", device=device)
+# iqa_metric = pyiqa.create_metric("qrealign-pro", device=device)
+
+# higher is better; scores are in [0, 1]
+print(iqa_metric.lower_better)        # False
+
+# image path or a (N, 3, H, W) RGB tensor in [0, 1]
+score = iqa_metric("photo.jpg")
+print(score)
+```
+
+| pyiqa name | Model | Params |
+|---|---|---|
+| `qrealign` (= `qrealign-mini`) | Mini | 0.8B |
+| `qrealign-lite` | Lite | 4B |
+| `qrealign-pro` | Pro | 9B |
+
+The metric also exposes an `aesthetic` task (IAA) alongside the default `quality`
+(IQA) scoring. See the [IQA-PyTorch Model Card](https://github.com/chaofengc/IQA-PyTorch/blob/main/docs/ModelCard.md) for details.
 
 ## Install
 
